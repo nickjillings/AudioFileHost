@@ -9,8 +9,13 @@
 */
 
 #include "../JuceLibraryCode/JuceHeader.h"
+#include <iostream>
 
 //==============================================================================
+
+void scaling(AudioBuffer<float> *buffer, float scalingFactor) {
+    buffer->applyGain(scalingFactor);
+}
 
 void processBuffer(AudioBuffer<float> *buffer)
 {
@@ -24,18 +29,24 @@ void processBuffer(AudioBuffer<float> *buffer)
         for (int n=0; n<numberOfSamples; n++)
         {
             // Example of the functions
-            output[n] = input[n]*0.5f;
+            if (input[n] >= 0.5) {
+                output[n] = 0.5;
+            } else if (input[n] >= -0.5) {
+                output[n] = -0.5;
+            } else {
+                output[n] = input[n];
+            }
         }
     }
 }
 
 int main (int argc, char* argv[])
 {
-	if (argc == 1) {
-		return 1;
-	}
+    std::string filename;
+    std::cout << "Please enter the file location\n";
+    std::cin >> filename;
     // Get the filename as a string from the launch options
-    String fname(argv[1]);
+    String fname(filename);
     //Open the file as a File object
     File inputFile(fname);
     // If the file doesn't exist, end now with error code 2
@@ -77,11 +88,13 @@ int main (int argc, char* argv[])
     }
     
     // Create the output streamers to actually write the data
-	FileOutputStream *fileStream = audioOutputFile.createOutputStream();
+    std::unique_ptr<FileOutputStream> fileStream = audioOutputFile.createOutputStream();
     WavAudioFormat wavFormat;
-    AudioFormatWriter *writer = wavFormat.createWriterFor(fileStream, sampleRate, numChannels, 16, StringPairArray(), 0);
+    AudioFormatWriter* writer;
+    writer = wavFormat.createWriterFor(fileStream.get(), sampleRate, numChannels, 16, StringPairArray(), 0);
     writer->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples());
     writer->flush();
+    fileStream.release();
     delete writer;
     return 0;
 }
